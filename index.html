@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Log & Paper Trail Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans pb-12">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white py-6 shadow-md">
+        <div class="max-w-5xl mx-auto px-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wide">WorkGuard</h1>
+                <p class="text-xs text-slate-400 mt-1">Document tasks, changes, and handoffs to keep an indisputable paper trail.</p>
+            </div>
+            <button onclick="exportLogs()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-4 rounded transition">
+                Export Log (JSON)
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Form Section -->
+        <section class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">Log New Activity</h2>
+            <form id="logForm" onsubmit="saveEntry(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Category</label>
+                    <select id="category" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Initial Instruction">Initial Instruction / Brief</option>
+                        <option value="Key Revision">Key Revision / Requested Change</option>
+                        <option value="Final Handoff">Final Handoff / Submission</option>
+                        <option value="Approval Note">Explicit Approval / Sign-off</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Task / Project Name</label>
+                    <input type="text" id="project" required placeholder="e.g., Q3 Marketing Report" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Who Gave the Direction?</label>
+                    <input type="text" id="requestedBy" required placeholder="e.g., Jane Doe (Senior Manager)" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Details & Context</label>
+                    <textarea id="details" rows="3" required placeholder="Exact details of what was requested or agreed upon..." class="w-full bg-slate-50 border border-slate-300 text-sm rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Proof Link / Channel Reference</label>
+                    <input type="text" id="proof" placeholder="e.g., Slack link, Email date, Drive folder" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 rounded-lg shadow transition">
+                    Save Record
+                </button>
+            </form>
+        </section>
+
+        <!-- Display Section -->
+        <section class="lg:col-span-2 space-y-4">
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-900">Recorded Activity Trail</h2>
+                <input type="text" id="searchInput" oninput="filterLogs()" placeholder="Search records..." class="bg-slate-50 border border-slate-300 text-sm rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500 w-48">
+            </div>
+
+            <div id="logsContainer" class="space-y-4">
+                <!-- Dynamic Log Cards Inserted Here -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', displayLogs);
+
+        function getCategoryBadge(category) {
+            switch(category) {
+                case 'Initial Instruction':
+                    return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Initial Instruction</span>';
+                case 'Key Revision':
+                    return '<span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded">Key Revision</span>';
+                case 'Final Handoff':
+                    return '<span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Final Handoff</span>';
+                case 'Approval Note':
+                    return '<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Approval</span>';
+                default:
+                    return '<span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">Log</span>';
+            }
+        }
+
+        function saveEntry(e) {
+            e.preventDefault();
+
+            const entry = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleString(),
+                category: document.getElementById('category').value,
+                project: document.getElementById('project').value,
+                requestedBy: document.getElementById('requestedBy').value,
+                details: document.getElementById('details').value,
+                proof: document.getElementById('proof').value
+            };
+
+            const logs = JSON.parse(localStorage.getItem('workLogs') || '[]');
+            logs.unshift(entry);
+            localStorage.setItem('workLogs', JSON.stringify(logs));
+
+            document.getElementById('logForm').reset();
+            displayLogs();
+        }
+
+        function displayLogs() {
+            const logs = JSON.parse(localStorage.getItem('workLogs') || '[]');
+            renderLogs(logs);
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = '';
+
+            if (logs.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-8 text-center rounded-xl border border-slate-200 text-slate-500">
+                        No work entries logged yet. Fill out the form to start building your paper trail.
+                    </div>`;
+                return;
+            }
+
+            logs.forEach(log => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center space-x-2">
+                            ${getCategoryBadge(log.category)}
+                            <h3 class="font-bold text-slate-900">${escapeHtml(log.project)}</h3>
+                        </div>
+                        <span class="text-xs text-slate-400">${log.timestamp}</span>
+                    </div>
+                    <p class="text-sm text-slate-700 whitespace-pre-line">${escapeHtml(log.details)}</p>
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                        <span><strong>Direction by:</strong> ${escapeHtml(log.requestedBy)}</span>
+                        ${log.proof ? `<span><strong>Proof:</strong> ${escapeHtml(log.proof)}</span>` : ''}
+                        <button onclick="deleteLog(${log.id})" class="text-red-500 hover:text-red-700 transition">Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function deleteLog(id) {
+            let logs = JSON.parse(localStorage.getItem('workLogs') || '[]');
+            logs = logs.filter(log => log.id !== id);
+            localStorage.setItem('workLogs', JSON.stringify(logs));
+            displayLogs();
+        }
+
+        function filterLogs() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const logs = JSON.parse(localStorage.getItem('workLogs') || '[]');
+            const filtered = logs.filter(log => 
+                log.project.toLowerCase().includes(query) ||
+                log.details.toLowerCase().includes(query) ||
+                log.requestedBy.toLowerCase().includes(query) ||
+                log.category.toLowerCase().includes(query)
+            );
+            renderLogs(filtered);
+        }
+
+        function exportLogs() {
+            const logs = localStorage.getItem('workLogs') || '[]';
+            const blob = new Blob([logs], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `work_paper_trail_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
